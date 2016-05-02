@@ -39,4 +39,19 @@
         style="?android:attr/borderlessButtonStyle"
         android:id="@+id/btnStopBlink" />
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        android:layout_below="@id/btnStopBlink"
+        android:layout_marginTop="7.5dp"
+        android:background="#69b4ff"
+        android:text="Button Drive"
+        android:textStyle="bold"
+        android:textSize="20dp"
+        android:textColor="#fff"
+        android:onClick="navigateToButtonDrive"
+        style="?android:attr/borderlessButtonStyle"
+        android:id="@+id/btnDrive" />
+
 </RelativeLayout>

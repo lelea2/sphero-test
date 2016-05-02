@@ -1,43 +1,56 @@
 package com.kdao.spherotest;
 
+import android.app.Activity;
+import android.os.Bundle;
+
 import android.Manifest;
 import android.app.Activity;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
 import com.orbotix.ConvenienceRobot;
 import com.orbotix.DualStackDiscoveryAgent;
 import com.orbotix.common.DiscoveryException;
 import com.orbotix.common.Robot;
 import com.orbotix.common.RobotChangedStateListener;
-import com.orbotix.le.RobotLE;
 
 import java.util.ArrayList;
 import java.util.List;
-import android.view.View;
 
 /**
- * Hello World Sample
- * Connect either a Bluetooth Classic or Bluetooth LE robot to an Android Device, then
- * blink the robot's LED on or off every two seconds.
+ * Button Drive sample
  *
- * This example also covers turning on Developer Mode for LE robots.
+ * Connect either a Bluetooth Classic or Bluetooth LE robot to an Android Device, then
+ * drive the robot by pressing buttons on the screen.
+ * Headings are all based off of the back LED being considered the back of the robot
+ *
+ * 0 moves forward
+ * 90 moves right
+ * 180 moves backward
+ * 270 moves left
  */
+public class ButtonDriveActivity extends Activity implements View.OnClickListener,
+        RobotChangedStateListener {
 
-public class MainActivity extends Activity implements RobotChangedStateListener {
+    private static final int REQUEST_CODE_LOCATION_PERMISSION = 42;
+    private static final float ROBOT_VELOCITY = 0.6f;
 
     private ConvenienceRobot mRobot;
 
-    private static final int REQUEST_CODE_LOCATION_PERMISSION = 42;
+    private Button mBtn0;
+    private Button mBtn90;
+    private Button mBtn180;
+    private Button mBtn270;
+    private Button mBtnStop;
 
     @Override
     protected void onCreate( Bundle savedInstanceState ) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        super.onCreate( savedInstanceState );
+        setContentView( R.layout.activity_button_drive );
 
         /*
             Associate a listener for robot state changes with the DualStackDiscoveryAgent.
@@ -46,6 +59,8 @@ public class MainActivity extends Activity implements RobotChangedStateListener 
             DiscoveryAgentLE checks only for Bluetooth LE robots.
        */
         DualStackDiscoveryAgent.getInstance().addRobotStateListener( this );
+
+        initViews();
 
         if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ) {
             int hasLocationPermission = checkSelfPermission( Manifest.permission.ACCESS_COARSE_LOCATION );
@@ -80,25 +95,18 @@ public class MainActivity extends Activity implements RobotChangedStateListener 
         }
     }
 
-    //Turn the robot LED on or off every two seconds
-    private void blink( final boolean lit ) {
-        if( mRobot == null ) {
-            System.out.println("Robot not online");
-            return;
-        }
+    private void initViews() {
+        mBtn0 = (Button) findViewById( R.id.btn_0 );
+        mBtn90 = (Button) findViewById( R.id.btn_90 );
+        mBtn180 = (Button) findViewById( R.id.btn_180 );
+        mBtn270 = (Button) findViewById( R.id.btn_270 );
+        mBtnStop = (Button) findViewById( R.id.btn_stop );
 
-        if( lit ) {
-            mRobot.setLed( 0.0f, 0.0f, 0.0f );
-        } else {
-            mRobot.setLed( 0.0f, 0.0f, 1.0f );
-        }
-
-        final Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            public void run() {
-                blink(!lit);
-            }
-        }, 2000);
+        mBtn0.setOnClickListener( this );
+        mBtn90.setOnClickListener( this );
+        mBtn180.setOnClickListener( this );
+        mBtn270.setOnClickListener( this );
+        mBtnStop.setOnClickListener( this );
     }
 
     @Override
@@ -115,7 +123,7 @@ public class MainActivity extends Activity implements RobotChangedStateListener 
         //If the DiscoveryAgent is not already looking for robots, start discovery.
         if( !DualStackDiscoveryAgent.getInstance().isDiscovering() ) {
             try {
-                DualStackDiscoveryAgent.getInstance().startDiscovery(getApplicationContext());
+                DualStackDiscoveryAgent.getInstance().startDiscovery( this );
             } catch (DiscoveryException e) {
                 Log.e("Sphero", "DiscoveryException: " + e.getMessage());
             }
@@ -141,46 +149,59 @@ public class MainActivity extends Activity implements RobotChangedStateListener 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        DualStackDiscoveryAgent.getInstance().addRobotStateListener(null);
+        DualStackDiscoveryAgent.getInstance().addRobotStateListener( null );
     }
 
     @Override
-    public void handleRobotChangedState( Robot robot, RobotChangedStateNotificationType type ) {
-        switch( type ) {
-            case Online: {
-
-                //If robot uses Bluetooth LE, Developer Mode can be turned on.
-                //This turns off DOS protection. This generally isn't required.
-                if( robot instanceof RobotLE) {
-                    ( (RobotLE) robot ).setDeveloperMode( true );
-                }
-
-                //Save the robot as a ConvenienceRobot for additional utility methods
-                mRobot = new ConvenienceRobot( robot );
-
-                //Start blinking the robot's LED
-                //blink( false );
-                break;
-            }
-            case Disconnected:
-                break;
-        }
-    }
-
-    public void setBlink(View v) {
-        blink(true);
-    }
-
-    public void stopBlink(View v) {
+    public void onClick(View v) {
+        //If the robot is null, then it is probably not connected and nothing needs to be done
         if( mRobot == null ) {
-            System.out.println("Robot not online");
             return;
         }
-        mRobot.disconnect();
+
+        /*
+            When a heading button is pressed, set the robot to drive in that heading.
+            All directions are based on the back LED being considered the back of the robot.
+            0 moves in the opposite direction of the back LED.
+         */
+        switch( v.getId() ) {
+            case R.id.btn_0: {
+                //Forward
+                mRobot.drive( 0.0f, ROBOT_VELOCITY );
+                break;
+            }
+            case R.id.btn_90: {
+                //To the right
+                mRobot.drive( 90.0f, ROBOT_VELOCITY );
+                break;
+            }
+            case R.id.btn_180: {
+                //Backward
+                mRobot.drive( 180.0f, ROBOT_VELOCITY );
+                break;
+            }
+            case R.id.btn_270: {
+                //To the left
+                mRobot.drive( 270.0f, ROBOT_VELOCITY );
+                break;
+            }
+            case R.id.btn_stop: {
+                //Stop the robot
+                mRobot.stop();
+                break;
+            }
+        }
     }
 
-    public void navigateToButtonDrive(View v) {
-        Intent launchActivity = new Intent(getApplicationContext(), ButtonDriveActivity.class);
-        startActivity(launchActivity);
+    @Override
+    public void handleRobotChangedState(Robot robot, RobotChangedStateNotificationType type) {
+        switch (type) {
+            case Online: {
+                //Save the robot as a ConvenienceRobot for additional utility methods
+                mRobot = new ConvenienceRobot(robot);
+                break;
+            }
+        }
     }
 }
+
