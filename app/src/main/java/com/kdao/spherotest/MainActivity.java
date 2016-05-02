@@ -176,7 +176,7 @@ public class MainActivity extends Activity implements RobotChangedStateListener 
             System.out.println("Robot not online");
             return;
         }
-        mRobot.disconnect();
+        mRobot.stop();
     }
 
     public void navigateToButtonDrive(View v) {
